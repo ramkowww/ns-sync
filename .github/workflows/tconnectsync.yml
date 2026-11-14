@@ -1,0 +1,38 @@
+name: tconnectsync
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Backfill: sync this many days of history (manual runs only)"
+        required: false
+        default: ""
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install tconnectsync
+        run: pip install "tconnectsync>=2"
+
+      - name: Sync Tandem Source to Nightscout
+        env:
+          TCONNECT_EMAIL: ${{ secrets.TCONNECT_EMAIL }}
+          TCONNECT_PASSWORD: ${{ secrets.TCONNECT_PASSWORD }}
+          TCONNECT_REGION: "US"
+          NS_URL: ${{ secrets.NS_URL }}
+          NS_SECRET: ${{ secrets.NS_SECRET }}
+          TIMEZONE_NAME: "America/Denver"
+        run: |
+          if [ -n "${{ inputs.days }}" ]; then
+            tconnectsync --days "${{ inputs.days }}" --features BASAL BOLUS IOB PUMP_EVENTS PROFILES CGM
+          else
+            tconnectsync --features BASAL BOLUS IOB PUMP_EVENTS PROFILES CGM
+          fi
